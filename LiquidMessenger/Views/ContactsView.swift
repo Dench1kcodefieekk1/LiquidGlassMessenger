@@ -19,13 +19,19 @@ struct ContactsView: View {
         }
     }
 
-    private var grouped: [(letter: String, contacts: [Contact])] {
+    private struct ContactGroup: Identifiable {
+        let letter: String
+        let contacts: [Contact]
+        var id: String { letter }
+    }
+
+    private var grouped: [ContactGroup] {
         let sorted = filteredContacts.sorted { $0.user.name < $1.user.name }
         let groupedByLetter = Dictionary(grouping: sorted) { contact in
             String(contact.user.name.prefix(1)).uppercased()
         }
         return groupedByLetter
-            .map { (letter: $0.key, contacts: $0.value) }
+            .map { ContactGroup(letter: $0.key, contacts: $0.value) }
             .sorted { $0.letter < $1.letter }
     }
 
@@ -62,7 +68,7 @@ struct ContactsView: View {
                     .fill(.thinMaterial)
             )
 
-            ForEach(grouped, id: \.letter) { group in
+            ForEach(grouped) { group in
                 Section(group.letter) {
                     ForEach(group.contacts) { contact in
                         Button {
