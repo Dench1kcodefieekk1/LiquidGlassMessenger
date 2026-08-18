@@ -1,0 +1,110 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build unsigned IPA
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    env:
+      APP_NAME: LiquidMessenger
+      SCHEME: LiquidMessenger
+      CONFIGURATION: Release
+      PROJECT_FILE: LiquidMessenger.xcodeproj
+      DERIVED_DATA: build/DerivedData
+      EXPORT_PATH: build/export
+      DESTINATION: generic/platform=iOS
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select latest Xcode
+        run: |
+          LATEST_XCODE=$(python3 - <<'EOF'
+          import glob, os, re
+          paths = glob.glob('/Applications/Xcode*.app')
+          def version(path):
+              match = re.search(r'Xcode_?(\d+(?:\.\d+)*)', os.path.basename(path))
+              return tuple(int(part) for part in match.group(1).split('.')) if match else (0,)
+          print(max(paths, key=version) if paths else '')
+          EOF
+          )
+          if [ -z "$LATEST_XCODE" ]; then
+            echo "::error::No Xcode installation found on the runner."
+            exit 1
+          fi
+          sudo xcode-select -s "$LATEST_XCODE/Contents/Developer"
+          echo "Selected: $LATEST_XCODE"
+
+      - name: Print toolchain versions
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Ensure XcodeGen is available
+        run: |
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            echo "xcodegen not found, installing via Homebrew..."
+            HOMEBREW_NO_AUTO_UPDATE=1 brew install xcodegen
+          fi
+          xcodegen --version
+
+      - name: Generate Xcode project from project.yml
+        run: |
+          xcodegen generate --spec project.yml
+          if [ ! -d "$PROJECT_FILE" ]; then
+            echo "::error::$PROJECT_FILE was not generated."
+            exit 1
+          fi
+
+      - name: Verify project and scheme exist
+        run: |
+          xcodebuild -project "$PROJECT_FILE" -list
+          if ! xcodebuild -project "$PROJECT_FILE" -list | grep -q "$SCHEME"; then
+            echo "::error::Scheme '$SCHEME' not found in $PROJECT_FILE."
+            exit 1
+          fi
+
+      - name: Build for device (unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project "$PROJECT_FILE" \
+            -scheme "$SCHEME" \
+            -configuration "$CONFIGURATION" \
+            -destination "$DESTINATION" \
+            -derivedDataPath "$DERIVED_DATA" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Package unsigned IPA
+        run: |
+          APP_PATH="$DERIVED_DATA/Build/Products/$CONFIGURATION-iphoneos/$APP_NAME.app"
+          if [ ! -d "$APP_PATH" ]; then
+            echo "::error::Built application not found at $APP_PATH"
+            find "$DERIVED_DATA/Build/Products" -maxdepth 2 -name "*.app" || true
+            exit 1
+          fi
+          mkdir -p "$EXPORT_PATH/Payload"
+          cp -R "$APP_PATH" "$EXPORT_PATH/Payload/"
+          cd "$EXPORT_PATH"
+          zip -qry "$APP_NAME.ipa" Payload
+          cd -
+          echo "Packaged: $EXPORT_PATH/$APP_NAME.ipa"
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LiquidMessenger-iOS-unsigned
+          path: ${{ env.EXPORT_PATH }}/${{ env.APP_NAME }}.ipa
+          if-no-files-found: error
+          retention-days: 14
