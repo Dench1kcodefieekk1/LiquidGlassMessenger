@@ -47,7 +47,7 @@ struct EditProfileView: View {
 
                 VStack(alignment: .leading, spacing: AppSpacing.xxs) {
                     TextField("Username", text: $vm.username)
-                        .autocapitalization(.never)
+                        .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .onChange(of: vm.username) { _ in vm.sanitizeUsername() }
                     if let error = vm.usernameError, !vm.username.isEmpty {

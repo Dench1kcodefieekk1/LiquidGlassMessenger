@@ -135,7 +135,7 @@ final class MessageService: ObservableObject, MessageServiceProtocol {
             let reply = Message(senderID: chatID,
                                 incoming: true,
                                 kind: .text,
-                                text: MockData.cannedReplies[Int.random(in: MockData.cannedReplies.count)],
+                                text: MockData.cannedReplies[Int.random(in: 0..<MockData.cannedReplies.count)],
                                 date: Date(),
                                 status: .read)
             self.append(reply, to: chatID)

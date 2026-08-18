@@ -116,9 +116,11 @@ struct PrivacySettingsView: View {
                 }
                 Toggle("Profile Photo", isOn: $appState.settings.profilePhotoVisible)
             }
-            Section("Security") {
+            Section {
                 Toggle("Read Receipts", isOn: $appState.settings.readReceipts)
                 Toggle("Passcode Lock", isOn: $appState.settings.passcodeLock)
+            } header: {
+                Text("Security")
             } footer: {
                 Text("Passcode lock is a local mock setting in this demo.")
             }
