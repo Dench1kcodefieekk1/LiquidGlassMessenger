@@ -29,7 +29,8 @@ jobs:
         run: |
           LATEST_XCODE=$(python3 - <<'EOF'
           import glob, os, re
-          paths = glob.glob('/Applications/Xcode*.app')
+          paths = [p for p in glob.glob('/Applications/Xcode*.app')
+                   if 'beta' not in os.path.basename(p).lower()]
           def version(path):
               match = re.search(r'Xcode_?(\d+(?:\.\d+)*)', os.path.basename(path))
               return tuple(int(part) for part in match.group(1).split('.')) if match else (0,)
@@ -74,7 +75,8 @@ jobs:
 
       - name: Build for device (unsigned)
         run: |
-          set -o pipefail
+          mkdir -p build
+          BUILD_FAILED=0
           xcodebuild \
             -project "$PROJECT_FILE" \
             -scheme "$SCHEME" \
@@ -84,7 +86,26 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            build
+            build > build/xcodebuild.log 2>&1 || BUILD_FAILED=1
+
+          if [ "$BUILD_FAILED" = "1" ]; then
+            echo "::group::===== COMPILATION ERRORS (from xcodebuild log) ====="
+            grep -n "error:" build/xcodebuild.log | head -n 80 || cat build/xcodebuild.log | tail -n 100
+            echo "::endgroup::"
+            grep "error:" build/xcodebuild.log | head -n 5 | sed 's/^/::error::/' || true
+            echo "::error::Build failed. Full log is in the 'LiquidMessenger-build-log' artifact."
+            exit 1
+          fi
+          tail -n 30 build/xcodebuild.log
+
+      - name: Upload build log (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: LiquidMessenger-build-log
+          path: build/xcodebuild.log
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Package unsigned IPA
         run: |
