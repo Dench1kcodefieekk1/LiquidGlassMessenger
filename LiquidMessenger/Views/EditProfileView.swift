@@ -98,7 +98,9 @@ struct EditProfileView: View {
                     .onChange(of: vm.username) { _ in vm.sanitizeUsername() }
             } error: {
                 vm.username.isEmpty ? nil : vm.usernameError
-            } footer: "Username: 3–20 characters, lowercase letters, numbers and underscores only."
+            } footer: {
+                "Username: 3–20 characters, lowercase letters, numbers and underscores only."
+            }
 
             VStack(alignment: .leading, spacing: AppSpacing.xxs) {
                 GlassTextField(placeholder: "Bio", text: $vm.bio)
@@ -165,7 +167,7 @@ struct EditProfileView: View {
     private func fieldCell<Content: View>(
         @ViewBuilder content: () -> Content,
         error: () -> String?,
-        footer: String? = nil
+        footer: () -> String? = { nil }
     ) -> some View {
         VStack(alignment: .leading, spacing: AppSpacing.xxs) {
             content()
@@ -174,8 +176,8 @@ struct EditProfileView: View {
                     .font(AppTypography.caption)
                     .foregroundStyle(AppColors.destructive)
             }
-            if let footer {
-                Text(footer)
+            if let hint = footer() {
+                Text(hint)
                     .font(AppTypography.caption)
                     .foregroundStyle(AppColors.secondary)
             }
