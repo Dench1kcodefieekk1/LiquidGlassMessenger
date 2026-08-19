@@ -1,10 +1,12 @@
 import SwiftUI
 
-/// Profile card + entry points into settings categories.
+/// Telegram-style My Profile card + entry points into settings categories.
 struct ProfileView: View {
+    @AppStorage(AppStorageKeys.isLoggedIn) private var isLoggedIn = true
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var haptics: HapticService
+    @State private var confirmLogout = false
 
     var body: some View {
         List {
@@ -13,6 +15,24 @@ struct ProfileView: View {
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
             }
+
+            Section("Info") {
+                if let phone = appState.profile.phoneNumber, !phone.isEmpty {
+                    infoRow(icon: "phone", title: "Phone", value: phone)
+                }
+                if let location = appState.profile.location, !location.isEmpty {
+                    infoRow(icon: "mappin.and.ellipse", title: "Location", value: location)
+                }
+                if let dob = appState.profile.dateOfBirth {
+                    infoRow(icon: "gift",
+                            title: "Date of Birth",
+                            value: ProfileViewModel.dobFormatter.string(from: dob))
+                }
+            }
+            .listRowBackground(
+                RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous)
+                    .fill(.thinMaterial)
+            )
 
             Section("Categories") {
                 settingsRow(icon: "paintpalette", tint: .blue, title: "Appearance", destination: .appearance)
@@ -24,9 +44,39 @@ struct ProfileView: View {
                 RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous)
                     .fill(.thinMaterial)
             )
+
+            Section {
+                Button(role: .destructive) {
+                    confirmLogout = true
+                } label: {
+                    HStack {
+                        Spacer()
+                        Label("Log Out", systemImage: "rectangle.portrait.and.arrow.right")
+                            .font(AppTypography.callout.weight(.semibold))
+                        Spacer()
+                    }
+                }
+            }
+            .listRowBackground(
+                RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous)
+                    .fill(.thinMaterial)
+            )
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .confirmationDialog("Log out of LiquidMessenger?",
+                            isPresented: $confirmLogout,
+                            titleVisibility: .visible) {
+            Button("Log Out", role: .destructive) {
+                haptics.warning()
+                router.resetNavigation()
+                // Profile data is preserved; log back in with the same flow.
+                isLoggedIn = false
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Your profile and Saved messages stay on this device.")
+        }
     }
 
     private var profileCard: some View {
@@ -59,6 +109,26 @@ struct ProfileView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, AppSpacing.md)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func infoRow(icon: String, title: String, value: String) -> some View {
+        HStack(spacing: AppSpacing.sm) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 26)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(value)
+                    .font(AppTypography.body)
+                    .foregroundStyle(AppColors.primary)
+                    .lineLimit(1)
+                Text(title)
+                    .font(AppTypography.caption)
+                    .foregroundStyle(AppColors.secondary)
+            }
+            Spacer()
+        }
         .accessibilityElement(children: .combine)
     }
 

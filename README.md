@@ -1,6 +1,6 @@
 # LiquidMessenger
 
-A premium iOS messenger built with pure SwiftUI (zero third-party dependencies), featuring a Liquid Glass-inspired design system, floating navigation, full chat experience with realistic mock data, and a **GitHub Actions-first build pipeline** — you never need a Mac or Xcode locally.
+A premium iOS messenger built with pure SwiftUI (zero third-party dependencies), featuring Telegram-style authentication, a Liquid Glass-inspired design system, floating navigation with drag gesture, a fluid morphing message-send animation, and a **GitHub Actions-first build pipeline** — you never need a Mac or Xcode locally.
 
 ## Requirements (Windows developer)
 
@@ -63,14 +63,14 @@ Edit `PRODUCT_BUNDLE_IDENTIFIER` in [`project.yml`](project.yml) (target setting
 LiquidMessenger/
 ├── project.yml                        ← XcodeGen spec (source of truth for the .xcodeproj)
 ├── LiquidMessenger/
-│   ├── App/                           ← entry point, app state, router
+│   ├── App/                           ← entry point, app state, router, ThemeManager
 │   ├── DesignSystem/                  ← tokens + Glass components + FloatingTabBar
 │   ├── Models/                        ← User, Chat, Message, Contact, Call
-│   ├── Services/                      ← mock services + persistence + haptics
+│   ├── Services/                      ← local services + persistence + haptics
 │   ├── ViewModels/                    ← chat list, chat detail, profile, settings
-│   ├── Views/                         ← screens
+│   ├── Views/                         ← screens (Welcome, Phone, OTP, chats, settings)
 │   ├── Components/                    ← chat row, bubbles, input bar, avatars
-│   ├── Support/Info.plist
+│   ├── Support/                       ← Info.plist, CountryCodes
 │   └── Resources/Assets.xcassets
 ├── .github/workflows/build_ipa.yml
 ├── .gitignore
@@ -79,13 +79,17 @@ LiquidMessenger/
 
 ## Features
 
-- Liquid Glass design system (`GlassBackground`, `GlassCard`, `GlassButton`, `GlassCircleButton`, `GlassTabBar`, `GlassTextField`, `GlassSheet`, `GlassBadge`) with material layering, gradient tinting, specular strokes — iOS 16-safe (no dependency on newer-only APIs)
-- Floating capsule tab bar + circular compose FAB with haptics, badges and animated selection
-- Chat list: search, pinned/muted/archived/unread states, swipe actions, lazy rendering, 20+ seeded chats
-- Chat detail: bubbles, date separators, delivery states (`sent/delivered/read/failed`), reactions, reply, context menu, typing indicator, simulated incoming replies
+- Telegram-style local authentication: Welcome → Phone (country code with live flag + auto-focus handoff) → OTP (`11111`), session persisted via `@AppStorage("isLoggedIn")`, logout in Settings
+- Clean chat list: **no demo chats** — the only default conversation is **Saved Messages** (personal notes, persisted locally, polished empty state)
+- Fluid **morphing send animation**: the input text detaches, flies up and settles into the conversation as a real bubble (state machine + springs, Reduce Motion fallback)
+- Liquid Glass design system (`GlassBackground`, `GlassCard`, `GlassButton`, `GlassCircleButton`, `GlassTextField`, `GlassSheet`, `GlassBadge`) with material layering, gradient tinting, specular strokes — iOS 16-safe (no dependency on newer-only APIs)
+- Floating capsule tab bar + circular compose FAB with haptics, badges, animated selection and **interactive drag across tabs**
+- Chat list: search, pinned/muted/archived/unread states, swipe actions, lazy rendering
+- Chat detail: bubbles, date separators, delivery states (`sent/delivered/read/failed`), reactions, reply, context menu, typing indicator
 - Message types: text, image, video, file, voice, location, system
 - Input bar: expanding field, attachment menu, voice-record UI, reply mode, keyboard-safe
-- Contacts, Calls, Profile, Edit Profile (validated), Settings (appearance / notifications / privacy / data & storage)
-- Theme switching (System/Light/Dark) + accent colors, persisted
-- Local persistence via `UserDefaults + Codable`
+- My Profile (Telegram style): avatar, name, @username, phone from auth, location, date of birth — all editable and persisted; username validation
+- Contacts, Calls, Settings (appearance / notifications / privacy / data & storage)
+- Theme switching (System/Light/Dark) via one `@AppStorage("appTheme")` source of truth + live accent colors via `@AppStorage("accentColor")`
+- Local persistence via `UserDefaults + Codable` (profile, settings, chats, messages)
 - Haptic feedback service, Dynamic Type, VoiceOver labels, reduced-motion support

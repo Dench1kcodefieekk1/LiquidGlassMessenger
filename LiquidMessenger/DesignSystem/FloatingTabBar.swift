@@ -56,6 +56,10 @@ struct FloatingTabBar: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var haptics: HapticService
 
+    /// Tab highlighted while a finger drags across the capsule.
+    @State private var dragHover: RootTab?
+    @State private var capsuleWidth: CGFloat = 0
+
     var body: some View {
         HStack(alignment: .bottom, spacing: AppSpacing.sm) {
             capsule
@@ -80,10 +84,61 @@ struct FloatingTabBar: View {
         .padding(.horizontal, AppSpacing.xs)
         .background(GlassBackground(style: .capsule))
         .frame(maxWidth: 500)
+        .background(
+            GeometryReader { proxy in
+                Color.clear.onAppear { capsuleWidth = proxy.size.width }
+                    .onChange(of: proxy.size.width) { capsuleWidth = $0 }
+            }
+        )
+        // Interactive drag: hold the capsule and slide across the tabs;
+        // the tab under the finger highlights and is selected on release.
+        // Taps still reach the individual tab buttons (highPriorityGesture
+        // only wins once the touch actually moves).
+        .highPriorityGesture(
+            DragGesture(minimumDistance: 4)
+                .onChanged { value in
+                    let hovered = tab(atX: value.location.x)
+                    if hovered != dragHover {
+                        dragHover = hovered
+                        if let hovered {
+                            haptics.selection()
+                            withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                                selection = hovered
+                            }
+                        }
+                    }
+                }
+                .onEnded { value in
+                    if let target = tab(atX: value.location.x) {
+                        if target != selection {
+                            haptics.impact(.light)
+                        }
+                        if reduceMotion {
+                            selection = target
+                        } else {
+                            withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
+                                selection = target
+                            }
+                        }
+                    }
+                    dragHover = nil
+                }
+        )
+    }
+
+    /// Maps a horizontal position inside the capsule to the tab beneath it.
+    private func tab(atX x: CGFloat) -> RootTab? {
+        guard capsuleWidth > 0 else { return nil }
+        let tabs = RootTab.allCases
+        let slot = capsuleWidth / CGFloat(tabs.count)
+        let index = Int(x / slot)
+        guard index >= 0, index < tabs.count else { return nil }
+        return tabs[index]
     }
 
     private func tabItem(_ tab: RootTab) -> some View {
         let isSelected = selection == tab
+        let isHovered = dragHover == tab
         return Button {
             guard selection != tab else { return }
             haptics.selection()
@@ -100,6 +155,7 @@ struct FloatingTabBar: View {
                     .font(.system(size: 17, weight: .semibold))
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(isSelected ? Color.accentColor : AppColors.secondary)
+                    .scaleEffect(isHovered && !reduceMotion ? 1.12 : 1)
                     .overlay(alignment: .topTrailing) {
                         if tab == .chats, unreadBadge > 0, !isSelected {
                             Circle()

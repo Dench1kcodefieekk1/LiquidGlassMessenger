@@ -10,5 +10,4 @@ enum AppContainer {
     static let messageService = MessageService(chatService: chatService)
     static let contactService = ContactService()
     static let callService = MockCallService()
-    static let appViewModel = AppViewModel(state: appState)
 }

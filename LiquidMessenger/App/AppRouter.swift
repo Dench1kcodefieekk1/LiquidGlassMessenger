@@ -8,6 +8,8 @@ final class AppRouter: ObservableObject {
     @Published var callsPath: [String] = []
     @Published var settingsPath: [SettingsDestination] = []
     @Published var isComposePresented = false
+    /// Pushes PhoneNumberView on top of WelcomeView in the auth stack.
+    @Published var isPhoneFlowPresented = false
 
     /// Opens a chat from anywhere in the app.
     func openChat(id: String) {
@@ -20,6 +22,17 @@ final class AppRouter: ObservableObject {
 
     func openCompose() {
         isComposePresented = true
+    }
+
+    /// Clears all navigation state (used on logout).
+    func resetNavigation() {
+        selectedTab = .chats
+        chatsPath = []
+        contactsPath = []
+        callsPath = []
+        settingsPath = []
+        isComposePresented = false
+        isPhoneFlowPresented = false
     }
 }
 

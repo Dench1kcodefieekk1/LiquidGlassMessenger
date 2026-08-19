@@ -9,24 +9,26 @@ protocol MessageServiceProtocol: ObservableObject {
     func deleteMessage(_ messageID: String, in chatID: String)
 }
 
-/// Offline message store with simulated delivery, read receipts and
-/// incoming replies so the UI behaves like a live messenger.
+/// Local message store. V2 seeds no history: every conversation starts empty
+/// and everything the user sends is persisted locally, so messages survive
+/// app restarts. Saved Messages behaves as a pure self-chat (instant local
+/// delivery, no simulated replies); peer chats keep the light delivery and
+/// reply simulation so the messenger feels alive.
 final class MessageService: ObservableObject, MessageServiceProtocol {
 
-    @Published private(set) var store: [String: [Message]] = [:]
+    @Published private(set) var store: [String: [Message]]
 
     private let chatService: ChatService
     private var sentCounter = 0
 
     init(chatService: ChatService) {
         self.chatService = chatService
+        self.store = PersistenceService.load([String: [Message]].self,
+                                             key: PersistenceKeys.messages) ?? [:]
     }
 
     func messages(for chatID: String) -> [Message] {
-        if store[chatID] == nil {
-            store[chatID] = MockMessagesStore.take(chatID: chatID)
-        }
-        return store[chatID] ?? []
+        store[chatID] ?? []
     }
 
     // MARK: Sending
@@ -41,8 +43,13 @@ final class MessageService: ObservableObject, MessageServiceProtocol {
                               replyToID: replyTo?.id,
                               replyPreview: replyTo?.preview)
         append(message, to: chatID)
-        scheduleDelivery(of: message.id, in: chatID)
-        maybeSimulateReply(in: chatID, peerName: peerName)
+        if chatID == Chat.savedMessagesID {
+            // Self-chat: instantly "read by me", no simulation.
+            setStatus(.read, of: message.id, in: chatID)
+        } else {
+            scheduleDelivery(of: message.id, in: chatID)
+            maybeSimulateReply(in: chatID, peerName: peerName)
+        }
     }
 
     func send(attachment: MessageAttachment, in chatID: String, peerName: String, replyTo: Message?) {
@@ -56,8 +63,12 @@ final class MessageService: ObservableObject, MessageServiceProtocol {
                               replyToID: replyTo?.id,
                               replyPreview: replyTo?.preview)
         append(message, to: chatID)
-        scheduleDelivery(of: message.id, in: chatID)
-        maybeSimulateReply(in: chatID, peerName: peerName)
+        if chatID == Chat.savedMessagesID {
+            setStatus(.read, of: message.id, in: chatID)
+        } else {
+            scheduleDelivery(of: message.id, in: chatID)
+            maybeSimulateReply(in: chatID, peerName: peerName)
+        }
     }
 
     // MARK: Reactions / deletion
@@ -79,28 +90,38 @@ final class MessageService: ObservableObject, MessageServiceProtocol {
             list[index].reactions.append(.init(emoji: emoji, isFromMe: true, count: 1))
         }
         store[chatID] = list
+        persist()
     }
 
     func deleteMessage(_ messageID: String, in chatID: String) {
         store[chatID]?.removeAll { $0.id == messageID }
         if let last = store[chatID]?.last {
             chatService.updateLastMessage(last, in: chatID)
+        } else {
+            chatService.updateLastMessage(nil, in: chatID)
         }
+        persist()
+    }
+
+    /// Removes all messages of a chat (used when a chat is deleted).
+    func removeMessages(in chatID: String) {
+        guard store[chatID] != nil else { return }
+        store[chatID] = nil
+        persist()
     }
 
     // MARK: Simulation
 
     private func append(_ message: Message, to chatID: String) {
-        if store[chatID] == nil {
-            store[chatID] = MockMessagesStore.take(chatID: chatID)
-        }
         store[chatID, default: []].append(message)
         chatService.updateLastMessage(message, in: chatID)
+        persist()
     }
 
     private func setStatus(_ status: MessageStatus, of messageID: String, in chatID: String) {
         guard let index = store[chatID]?.firstIndex(where: { $0.id == messageID }) else { return }
         store[chatID]?[index].status = status
+        persist()
     }
 
     /// sending → sent → delivered, with an occasional failure to exercise the UI.
@@ -147,5 +168,11 @@ final class MessageService: ObservableObject, MessageServiceProtocol {
                 }
             }
         }
+    }
+
+    // MARK: Persistence
+
+    private func persist() {
+        PersistenceService.save(store, key: PersistenceKeys.messages)
     }
 }

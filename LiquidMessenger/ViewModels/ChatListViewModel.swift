@@ -53,7 +53,15 @@ final class ChatListViewModel: ObservableObject {
     }
 
     var regularChats: [Chat] {
-        visibleChats.filter { !$0.isPinned }.sorted { $0.sortedLastDate > $1.sortedLastDate }
+        let sorted = visibleChats.filter { !$0.isPinned }
+            .sorted { $0.sortedLastDate > $1.sortedLastDate }
+        // Saved Messages always stays at the top of the list.
+        return sorted.sorted { lhs, rhs in
+            if lhs.isSavedMessages != rhs.isSavedMessages {
+                return lhs.isSavedMessages
+            }
+            return false
+        }
     }
 
     var archivedCount: Int {

@@ -22,10 +22,8 @@ enum PersistenceService {
 
 /// Centralized persistence keys.
 enum PersistenceKeys {
-    static let profile = "profile.v1"
+    static let profile = "profile.v2"
     static let settings = "settings.v1"
-    static let theme = "theme.v1"
-    static let accent = "accent.v1"
-    static let pinnedChats = "pinnedChats.v1"
-    static let mutedChats = "mutedChats.v1"
+    static let chats = "chats.v2"
+    static let messages = "messages.v2"
 }

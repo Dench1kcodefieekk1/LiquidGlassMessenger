@@ -5,12 +5,11 @@ import SwiftUI
 struct ChatRow: View {
     let chat: Chat
 
+    @EnvironmentObject private var appState: AppState
+
     var body: some View {
         HStack(spacing: AppSpacing.sm) {
-            AvatarView(name: chat.peer.name,
-                       gradientIndex: chat.peer.gradientIndex,
-                       size: 52,
-                       isOnline: chat.peer.isOnline)
+            avatar
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: AppSpacing.xxs) {
@@ -60,6 +59,30 @@ struct ChatRow: View {
         .accessibilityLabel(accessibilitySummary)
     }
 
+    /// Saved Messages shows the user's own avatar with a bookmark badge.
+    private var avatar: some View {
+        Group {
+            if chat.isSavedMessages {
+                AvatarView(name: appState.profile.name,
+                           gradientIndex: appState.profile.gradientIndex,
+                           size: 52)
+                    .overlay(alignment: .bottomTrailing) {
+                        Image(systemName: "bookmark.fill")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 20, height: 20)
+                            .background(Circle().fill(Color.accentColor))
+                            .overlay(Circle().strokeBorder(Color.white.opacity(0.4), lineWidth: 0.8))
+                    }
+            } else {
+                AvatarView(name: chat.peer.name,
+                           gradientIndex: chat.peer.gradientIndex,
+                           size: 52,
+                           isOnline: chat.peer.isOnline)
+            }
+        }
+    }
+
     @ViewBuilder
     private var previewLine: some View {
         if chat.isTyping {
@@ -83,7 +106,7 @@ struct ChatRow: View {
                     .lineLimit(1)
             }
         } else {
-            Text("No messages yet")
+            Text(chat.isSavedMessages ? "Save messages and notes here" : "No messages yet")
                 .font(AppTypography.footnote)
                 .foregroundStyle(AppColors.tertiary)
         }

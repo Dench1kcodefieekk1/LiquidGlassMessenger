@@ -13,26 +13,30 @@ struct SettingsView: View {
 // MARK: - Appearance
 
 struct AppearanceSettingsView: View {
-    @EnvironmentObject private var appState: AppState
+    @AppStorage(AppStorageKeys.appTheme) private var themeRaw = AppTheme.system.rawValue
+    @AppStorage(AppStorageKeys.accentColor) private var accentRaw = AccentChoice.blue.rawValue
     @EnvironmentObject private var haptics: HapticService
+
+    private var theme: AppTheme { AppTheme(rawValue: themeRaw) ?? .system }
+    private var accent: AccentChoice { AccentChoice(rawValue: accentRaw) ?? .blue }
 
     var body: some View {
         Form {
             Section("Theme") {
-                ForEach(AppTheme.allCases) { theme in
+                ForEach(AppTheme.allCases) { option in
                     Button {
-                        appState.theme = theme
+                        themeRaw = option.rawValue
                         haptics.selection()
                     } label: {
                         HStack {
-                            Image(systemName: theme.icon)
+                            Image(systemName: option.icon)
                                 .font(.system(size: 16))
                                 .foregroundStyle(Color.accentColor)
                                 .frame(width: 26)
-                            Text(theme.displayName)
+                            Text(option.displayName)
                                 .foregroundStyle(AppColors.primary)
                             Spacer()
-                            if appState.theme == theme {
+                            if theme == option {
                                 Image(systemName: "checkmark")
                                     .font(.system(size: 14, weight: .semibold))
                                     .foregroundStyle(Color.accentColor)
@@ -48,7 +52,7 @@ struct AppearanceSettingsView: View {
                 HStack(spacing: AppSpacing.md) {
                     ForEach(AccentChoice.allCases) { choice in
                         Button {
-                            appState.accent = choice
+                            accentRaw = choice.rawValue
                             haptics.selection()
                         } label: {
                             Circle()
@@ -56,7 +60,7 @@ struct AppearanceSettingsView: View {
                                 .frame(width: 34, height: 34)
                                 .overlay(
                                     Circle().strokeBorder(
-                                        appState.accent == choice ? Color.primary.opacity(0.6) : Color.clear,
+                                        accent == choice ? Color.primary.opacity(0.6) : Color.clear,
                                         lineWidth: 2
                                     )
                                 )
@@ -64,7 +68,7 @@ struct AppearanceSettingsView: View {
                                     Image(systemName: "checkmark")
                                         .font(.system(size: 13, weight: .bold))
                                         .foregroundStyle(.white)
-                                        .opacity(appState.accent == choice ? 1 : 0)
+                                        .opacity(accent == choice ? 1 : 0)
                                 )
                         }
                         .accessibilityLabel(choice.displayName)

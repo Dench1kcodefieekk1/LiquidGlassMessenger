@@ -58,23 +58,3 @@ enum AppColors {
 
     static let accentPalette: [Color] = [.blue, .purple, .pink, .orange, .green, .teal]
 }
-
-/// Persistable accent color choice.
-enum AccentChoice: String, Codable, CaseIterable, Identifiable {
-    case blue, purple, pink, orange, green, teal
-
-    var id: String { rawValue }
-
-    var color: Color {
-        switch self {
-        case .blue: return .blue
-        case .purple: return .purple
-        case .pink: return .pink
-        case .orange: return .orange
-        case .green: return .green
-        case .teal: return .teal
-        }
-    }
-
-    var displayName: String { rawValue.capitalized }
-}

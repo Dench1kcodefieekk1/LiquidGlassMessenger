@@ -1,27 +1,60 @@
 import SwiftUI
 
-/// Root container: ambient background, per-tab navigation stacks and the
-/// floating glass navigation overlay.
+/// Root container: session switch (auth flow vs main app), ambient
+/// background, per-tab navigation stacks and the floating glass navigation.
 struct RootView: View {
+    /// Single session flag for the whole app, persisted across restarts.
+    @AppStorage(AppStorageKeys.isLoggedIn) private var isLoggedIn = false
+
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var chatService: ChatService
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
             AppColors.ambientBackground(light: colorScheme == .light)
                 .ignoresSafeArea()
 
-            content
+            if isLoggedIn {
+                mainApp
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.98)))
+            } else {
+                authFlow
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 1.02)))
+            }
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            FloatingTabBar(selection: $router.selectedTab,
-                           unreadBadge: chatService.totalUnread,
-                           onCompose: { router.openCompose() })
+        .animation(reduceMotion ? nil : .spring(response: 0.45, dampingFraction: 0.9), value: isLoggedIn)
+    }
+
+    // MARK: Auth flow
+
+    /// Welcome → Phone → OTP, pushed inside a single navigation stack so
+    /// transitions stay smooth and the back button works naturally.
+    private var authFlow: some View {
+        NavigationStack {
+            WelcomeView()
+                .navigationDestination(isPresented: Binding(
+                    get: { router.isPhoneFlowPresented },
+                    set: { router.isPhoneFlowPresented = $0 }
+                )) {
+                    PhoneNumberView()
+                }
         }
-        .sheet(isPresented: $router.isComposePresented) {
-            ComposeView()
-        }
+    }
+
+    // MARK: Main app
+
+    private var mainApp: some View {
+        content
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                FloatingTabBar(selection: $router.selectedTab,
+                               unreadBadge: chatService.totalUnread,
+                               onCompose: { router.openCompose() })
+            }
+            .sheet(isPresented: $router.isComposePresented) {
+                ComposeView()
+            }
     }
 
     @ViewBuilder

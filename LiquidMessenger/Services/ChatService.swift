@@ -13,23 +13,32 @@ protocol ChatServiceProtocol: ObservableObject {
     func delete(_ chatID: String)
     func markRead(_ chatID: String)
     func setTyping(_ chatID: String, _ isTyping: Bool)
-    func updateLastMessage(_ message: Message, in chatID: String, incrementUnread: Bool)
+    func updateLastMessage(_ message: Message?, in chatID: String, incrementUnread: Bool)
 }
 
-/// Fully offline chat store seeded with mock data.
-/// Pin/mute state is persisted; everything else lives in memory.
+/// Chat store. V2 starts with a single permanent "Saved Messages" self-chat;
+/// there are no seeded demo conversations. The full chat list is persisted
+/// locally so conversations survive restarts.
 final class ChatService: ObservableObject, ChatServiceProtocol {
     @Published private(set) var chats: [Chat] = []
 
     init() {
-        var seeded = MockData.makeChats()
-        let pinned = PersistenceService.load([String].self, key: PersistenceKeys.pinnedChats) ?? []
-        let muted = PersistenceService.load([String].self, key: PersistenceKeys.mutedChats) ?? []
-        for index in seeded.indices {
-            if pinned.contains(seeded[index].id) { seeded[index].isPinned = true }
-            if muted.contains(seeded[index].id) { seeded[index].isMuted = true }
+        if let stored = PersistenceService.load([Chat].self, key: PersistenceKeys.chats), !stored.isEmpty {
+            chats = stored
+        } else {
+            chats = [Self.makeSavedMessagesChat()]
+            persist()
         }
-        chats = seeded
+    }
+
+    /// The permanent personal-notes conversation.
+    static func makeSavedMessagesChat() -> Chat {
+        Chat(id: Chat.savedMessagesID,
+             peer: User(id: Chat.savedMessagesID,
+                        name: "Saved Messages",
+                        username: "saved",
+                        isOnline: true,
+                        gradientIndex: 0))
     }
 
     var totalUnread: Int {
@@ -54,55 +63,61 @@ final class ChatService: ObservableObject, ChatServiceProtocol {
         }
         let chat = Chat(peer: user)
         chats.insert(chat, at: 0)
+        persist()
         return chat
     }
 
     func togglePinned(_ chatID: String) {
         guard let index = chats.firstIndex(where: { $0.id == chatID }) else { return }
         chats[index].isPinned.toggle()
-        persistPinned()
+        persist()
     }
 
     func toggleMuted(_ chatID: String) {
         guard let index = chats.firstIndex(where: { $0.id == chatID }) else { return }
         chats[index].isMuted.toggle()
-        persistMuted()
+        persist()
     }
 
     func toggleArchived(_ chatID: String) {
-        guard let index = chats.firstIndex(where: { $0.id == chatID }) else { return }
+        guard chatID != Chat.savedMessagesID,
+              let index = chats.firstIndex(where: { $0.id == chatID }) else { return }
         chats[index].isArchived.toggle()
+        persist()
     }
 
     func delete(_ chatID: String) {
+        guard chatID != Chat.savedMessagesID else { return }
         chats.removeAll { $0.id == chatID }
+        AppContainer.messageService.removeMessages(in: chatID)
+        persist()
     }
 
     func markRead(_ chatID: String) {
-        guard let index = chats.firstIndex(where: { $0.id == chatID }) else { return }
+        guard let index = chats.firstIndex(where: { $0.id == chatID }),
+              chats[index].unreadCount != 0 else { return }
         chats[index].unreadCount = 0
+        persist()
     }
 
     func setTyping(_ chatID: String, _ isTyping: Bool) {
-        guard let index = chats.firstIndex(where: { $0.id == chatID }) else { return }
+        guard let index = chats.firstIndex(where: { $0.id == chatID }),
+              chats[index].isTyping != isTyping else { return }
         chats[index].isTyping = isTyping
     }
 
-    func updateLastMessage(_ message: Message, in chatID: String, incrementUnread: Bool = false) {
+    func updateLastMessage(_ message: Message?, in chatID: String, incrementUnread: Bool = false) {
         guard let index = chats.firstIndex(where: { $0.id == chatID }) else { return }
         chats[index].lastMessage = message
         if incrementUnread {
             chats[index].unreadCount += 1
         }
+        persist()
     }
 
     // MARK: Persistence
 
-    private func persistPinned() {
-        PersistenceService.save(chats.filter { $0.isPinned }.map { $0.id }, key: PersistenceKeys.pinnedChats)
-    }
-
-    private func persistMuted() {
-        PersistenceService.save(chats.filter { $0.isMuted }.map { $0.id }, key: PersistenceKeys.mutedChats)
+    private func persist() {
+        PersistenceService.save(chats, key: PersistenceKeys.chats)
     }
 }

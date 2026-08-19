@@ -77,6 +77,34 @@ struct EditProfileView: View {
             } footer: {
                 Text("Username: 3–20 characters, lowercase letters, numbers and underscores only.")
             }
+
+            Section("Details") {
+                VStack(alignment: .leading, spacing: AppSpacing.xxs) {
+                    TextField("Phone", text: $vm.phoneNumber)
+                        .keyboardType(.phonePad)
+                    if let error = vm.phoneError {
+                        Text(error)
+                            .font(AppTypography.caption)
+                            .foregroundStyle(AppColors.destructive)
+                    }
+                }
+
+                TextField("Location", text: $vm.location)
+                    .onChange(of: vm.location) { newValue in
+                        if newValue.count > ProfileViewModel.locationMaxLength {
+                            vm.location = String(newValue.prefix(ProfileViewModel.locationMaxLength))
+                        }
+                    }
+
+                Toggle("Date of Birth", isOn: $vm.dobEnabled.animation())
+                if vm.dobEnabled {
+                    DatePicker("Born", selection: $vm.dateOfBirth,
+                               in: ...Date(),
+                               displayedComponents: .date)
+                        .datePickerStyle(.compact)
+                        .transition(.opacity)
+                }
+            }
         }
         .navigationTitle("Edit Profile")
         .navigationBarTitleDisplayMode(.inline)

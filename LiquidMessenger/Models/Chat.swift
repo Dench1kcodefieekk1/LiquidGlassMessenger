@@ -1,7 +1,10 @@
 import Foundation
 
-/// A conversation with a single peer in this demo app.
+/// A conversation with a single peer in this app.
 struct Chat: Identifiable, Codable, Equatable {
+    /// Stable identifier of the permanent self-chat.
+    static let savedMessagesID = "saved_messages"
+
     let id: String
     var peer: User
     var lastMessage: Message?
@@ -30,4 +33,7 @@ struct Chat: Identifiable, Codable, Equatable {
     }
 
     var sortedLastDate: Date { lastMessage?.date ?? .distantPast }
+
+    /// The permanent "Saved Messages" self-chat (personal notes).
+    var isSavedMessages: Bool { id == Chat.savedMessagesID }
 }
