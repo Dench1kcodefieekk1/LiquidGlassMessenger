@@ -5,7 +5,10 @@ import SwiftUI
 enum AppStorageKeys {
     static let isLoggedIn = "isLoggedIn"
     static let appTheme = "appTheme"
-    static let accentColor = "accentColor"
+    static let accentColor = "selectedAccentColor"
+    /// V2 key, kept only to migrate the user's choice to `selectedAccentColor`.
+    static let legacyAccentColor = "accentColor"
+    static let selectedChatFolder = "selectedChatFolder"
 }
 
 /// Appearance theme. Persisted through `@AppStorage("appTheme")` and applied
@@ -37,10 +40,10 @@ enum AppTheme: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-/// Persistable accent color. Persisted through `@AppStorage("accentColor")`
+/// Persistable accent color. Persisted through `@AppStorage("selectedAccentColor")`
 /// and applied globally via `.tint(...)` so every control updates live.
 enum AccentChoice: String, Codable, CaseIterable, Identifiable {
-    case blue, purple, pink, orange, green, teal
+    case blue, purple, pink, orange, green
 
     var id: String { rawValue }
 
@@ -51,7 +54,6 @@ enum AccentChoice: String, Codable, CaseIterable, Identifiable {
         case .pink: return .pink
         case .orange: return .orange
         case .green: return .green
-        case .teal: return .teal
         }
     }
 
@@ -68,5 +70,15 @@ enum ThemeManager {
 
     static func tint(for accent: AccentChoice) -> Color {
         accent.color
+    }
+
+    /// One-time migration from the V2 `accentColor` key to the V3
+    /// `selectedAccentColor` key, preserving the user's choice.
+    static func migrateLegacyAccentIfNeeded() {
+        let defaults = UserDefaults.standard
+        guard defaults.string(forKey: AppStorageKeys.accentColor) == nil,
+              let legacy = defaults.string(forKey: AppStorageKeys.legacyAccentColor) else { return }
+        defaults.set(legacy, forKey: AppStorageKeys.accentColor)
+        defaults.removeObject(forKey: AppStorageKeys.legacyAccentColor)
     }
 }

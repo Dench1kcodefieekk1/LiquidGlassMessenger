@@ -16,6 +16,10 @@ struct User: Identifiable, Codable, Equatable, Hashable {
     var location: String?
     /// Optional date of birth (V2).
     var dateOfBirth: Date?
+    /// Telegram-style split name parts (V3). Optional so profiles persisted
+    /// by earlier versions decode without migration; `name` stays canonical.
+    var firstName: String?
+    var lastName: String?
 
     init(id: String = UUID().uuidString,
          name: String,
@@ -26,7 +30,9 @@ struct User: Identifiable, Codable, Equatable, Hashable {
          gradientIndex: Int = 0,
          phoneNumber: String? = nil,
          location: String? = nil,
-         dateOfBirth: Date? = nil) {
+         dateOfBirth: Date? = nil,
+         firstName: String? = nil,
+         lastName: String? = nil) {
         self.id = id
         self.name = name
         self.username = username
@@ -37,6 +43,8 @@ struct User: Identifiable, Codable, Equatable, Hashable {
         self.phoneNumber = phoneNumber
         self.location = location
         self.dateOfBirth = dateOfBirth
+        self.firstName = firstName
+        self.lastName = lastName
     }
 
     var initials: String {

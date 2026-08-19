@@ -19,6 +19,7 @@ struct ChatDetailView: View {
     @EnvironmentObject private var chatService: ChatService
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var haptics: HapticService
+    @EnvironmentObject private var router: AppRouter
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var draftText = ""
@@ -70,6 +71,10 @@ struct ChatDetailView: View {
                 .padding(.bottom, AppSpacing.xxs)
         }
         .onPreferenceChange(InputOriginKey.self) { inputOriginY = $0 }
+        // V3 §3: the floating tab bar never appears inside a chat —
+        // the Liquid Glass input bar is the only bottom UI here.
+        .onAppear { router.isTabBarHidden = true }
+        .onDisappear { router.isTabBarHidden = false }
         .overlay {
             if sendPhase == .preparing || sendPhase == .morphing, let ghost = ghostMessage {
                 GeometryReader { proxy in

@@ -10,6 +10,12 @@ struct LiquidMessengerApp: App {
     private var theme: AppTheme { AppTheme(rawValue: themeRaw) ?? .system }
     private var accent: AccentChoice { AccentChoice(rawValue: accentRaw) ?? .blue }
 
+    init() {
+        // Runs before the first body evaluation, so the migrated value is
+        // what every @AppStorage(accentColor) binding reads.
+        ThemeManager.migrateLegacyAccentIfNeeded()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()

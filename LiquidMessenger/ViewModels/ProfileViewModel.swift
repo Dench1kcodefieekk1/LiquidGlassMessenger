@@ -3,7 +3,8 @@ import Combine
 
 /// Profile editing state with live validation.
 final class ProfileViewModel: ObservableObject {
-    @Published var name: String
+    @Published var firstName: String
+    @Published var lastName: String
     @Published var username: String
     @Published var bio: String
     @Published var phoneNumber: String
@@ -23,7 +24,16 @@ final class ProfileViewModel: ObservableObject {
     init(appState: AppState) {
         self.appState = appState
         let profile = appState.profile
-        name = profile.name
+        // V3 split names; profiles saved by V2 fall back to splitting the
+        // existing display name on its first space.
+        if let first = profile.firstName {
+            firstName = first
+            lastName = profile.lastName ?? ""
+        } else {
+            let parts = profile.name.split(separator: " ", maxSplits: 1).map(String.init)
+            firstName = parts.first ?? profile.name
+            lastName = parts.count > 1 ? parts[1] : ""
+        }
         username = profile.username
         bio = profile.bio
         phoneNumber = profile.phoneNumber ?? ""
@@ -32,12 +42,27 @@ final class ProfileViewModel: ObservableObject {
         dateOfBirth = profile.dateOfBirth ?? Calendar.current.date(byAdding: .year, value: -20, to: Date()) ?? Date()
     }
 
+    /// Combined display name kept in sync with the split fields.
+    var displayName: String {
+        [firstName.trimmingCharacters(in: .whitespaces),
+         lastName.trimmingCharacters(in: .whitespaces)]
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
+
     // MARK: Validation
 
-    var nameError: String? {
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty { return "Name is required" }
-        if trimmed.count > Self.nameMaxLength { return "Name is too long" }
+    var firstNameError: String? {
+        let trimmed = firstName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return "First name is required" }
+        if trimmed.count > Self.nameMaxLength { return "First name is too long" }
+        return nil
+    }
+
+    var lastNameError: String? {
+        guard lastName.trimmingCharacters(in: .whitespacesAndNewlines).count <= Self.nameMaxLength else {
+            return "Last name is too long"
+        }
         return nil
     }
 
@@ -70,7 +95,8 @@ final class ProfileViewModel: ObservableObject {
     }
 
     var isValid: Bool {
-        nameError == nil
+        firstNameError == nil
+            && lastNameError == nil
             && usernameError == nil
             && phoneError == nil
             && bio.count <= Self.bioMaxLength
@@ -97,7 +123,11 @@ final class ProfileViewModel: ObservableObject {
     func save() -> Bool {
         guard isValid else { return false }
         var profile = appState.profile
-        profile.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let first = firstName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let last = lastName.trimmingCharacters(in: .whitespacesAndNewlines)
+        profile.firstName = first
+        profile.lastName = last.isEmpty ? nil : last
+        profile.name = displayName
         profile.username = username
         profile.bio = bio.trimmingCharacters(in: .whitespaces)
         let phone = phoneNumber.trimmingCharacters(in: .whitespaces)

@@ -26,4 +26,5 @@ enum PersistenceKeys {
     static let settings = "settings.v1"
     static let chats = "chats.v2"
     static let messages = "messages.v2"
+    static let chatFolders = "chatFolders.v1"
 }

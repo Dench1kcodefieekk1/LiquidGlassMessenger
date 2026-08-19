@@ -140,6 +140,7 @@ struct DataStorageSettingsView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var haptics: HapticService
     @StateObject private var vm = SettingsViewModel(appState: AppContainer.appState)
+    @State private var confirmClear = false
 
     var body: some View {
         Form {
@@ -154,8 +155,8 @@ struct DataStorageSettingsView: View {
                 }
 
                 Button(role: .destructive) {
-                    vm.clearCache()
-                    haptics.success()
+                    // V3 §40: destructive operations always ask first.
+                    confirmClear = true
                 } label: {
                     Text("Clear Cache")
                 }
@@ -178,5 +179,16 @@ struct DataStorageSettingsView: View {
         }
         .navigationTitle("Data & Storage")
         .navigationBarTitleDisplayMode(.inline)
+        .confirmationDialog("Clear cached data?",
+                            isPresented: $confirmClear,
+                            titleVisibility: .visible) {
+            Button("Clear Cache", role: .destructive) {
+                vm.clearCache()
+                haptics.success()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Removes temporary caches. Your messages and profile are not affected.")
+        }
     }
 }

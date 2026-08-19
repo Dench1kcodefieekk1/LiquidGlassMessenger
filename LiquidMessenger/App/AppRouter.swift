@@ -10,6 +10,9 @@ final class AppRouter: ObservableObject {
     @Published var isComposePresented = false
     /// Pushes PhoneNumberView on top of WelcomeView in the auth stack.
     @Published var isPhoneFlowPresented = false
+    /// Centralized tab-bar visibility (V3): Chat Detail hides the floating
+    /// bar on appear and restores it on disappear — one source of truth.
+    @Published var isTabBarHidden = false
 
     /// Opens a chat from anywhere in the app.
     func openChat(id: String) {
@@ -33,6 +36,7 @@ final class AppRouter: ObservableObject {
         settingsPath = []
         isComposePresented = false
         isPhoneFlowPresented = false
+        isTabBarHidden = false
     }
 }
 
@@ -42,5 +46,8 @@ enum SettingsDestination: Hashable {
     case notifications
     case privacy
     case dataStorage
+    case chatFolders
+    case devices
+    case sharedMedia
     case editProfile
 }

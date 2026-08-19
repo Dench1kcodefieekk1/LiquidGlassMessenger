@@ -82,14 +82,16 @@ LiquidMessenger/
 - Telegram-style local authentication: Welcome → Phone (country code with live flag + auto-focus handoff) → OTP (`11111`), session persisted via `@AppStorage("isLoggedIn")`, logout in Settings
 - Clean chat list: **no demo chats** — the only default conversation is **Saved Messages** (personal notes, persisted locally, polished empty state)
 - Fluid **morphing send animation**: the input text detaches, flies up and settles into the conversation as a real bubble (state machine + springs, Reduce Motion fallback)
+- **Chat Detail hides the floating tab bar** (centralized `isTabBarHidden`) — the Liquid Glass input bar is the only bottom UI inside a chat, and it restores automatically on the way back
 - Liquid Glass design system (`GlassBackground`, `GlassCard`, `GlassButton`, `GlassCircleButton`, `GlassTextField`, `GlassSheet`, `GlassBadge`) with material layering, gradient tinting, specular strokes — iOS 16-safe (no dependency on newer-only APIs)
-- Floating capsule tab bar + circular compose FAB with haptics, badges, animated selection and **interactive drag across tabs**
+- Floating capsule tab bar + circular compose FAB with haptics, badges and a **real-time drag indicator**: the accent capsule tracks the finger continuously as a fractional tab position, stretches subtly between slots, ticks haptics only on boundary crossings and springs onto the nearest tab on release (all state local to the bar — 120 Hz friendly, Reduce Motion aware)
 - Chat list: search, pinned/muted/archived/unread states, swipe actions, lazy rendering
 - Chat detail: bubbles, date separators, delivery states (`sent/delivered/read/failed`), reactions, reply, context menu, typing indicator
 - Message types: text, image, video, file, voice, location, system
 - Input bar: expanding field, attachment menu, voice-record UI, reply mode, keyboard-safe
-- My Profile (Telegram style): avatar, name, @username, phone from auth, location, date of birth — all editable and persisted; username validation
-- Contacts, Calls, Settings (appearance / notifications / privacy / data & storage)
-- Theme switching (System/Light/Dark) via one `@AppStorage("appTheme")` source of truth + live accent colors via `@AppStorage("accentColor")`
-- Local persistence via `UserDefaults + Codable` (profile, settings, chats, messages)
+- My Profile (Telegram style): avatar, first/last name, @username, phone from auth, location, date of birth — all editable and persisted; username validation; Edit Profile is a keyboard-safe `ScrollView` (`scrollDismissesKeyboard(.interactively)`, no hardcoded keyboard heights)
+- **Shared Media** (Photos / Files / Links) derived from real local messages with polished empty states
+- Contacts, Calls, Settings: Appearance, Notifications, Privacy & Security, Data & Storage (cache clear with confirmation), Chat Folders, Devices — single `NavigationStack`, native disclosure chevrons, bottom clearance for the floating bar
+- Theme switching (System/Light/Dark) via one `@AppStorage("appTheme")` source of truth + live global accent via `@AppStorage("selectedAccentColor")` applied at the app root (`.tint`), with automatic migration from the previous key
+- Local persistence via `UserDefaults + Codable` (profile, settings, chats, messages, folders)
 - Haptic feedback service, Dynamic Type, VoiceOver labels, reduced-motion support

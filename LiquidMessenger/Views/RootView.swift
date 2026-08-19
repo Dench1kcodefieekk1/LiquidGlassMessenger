@@ -48,10 +48,17 @@ struct RootView: View {
     private var mainApp: some View {
         content
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                FloatingTabBar(selection: $router.selectedTab,
-                               unreadBadge: chatService.totalUnread,
-                               onCompose: { router.openCompose() })
+                // Chat Detail hides the floating bar entirely (V3 §3):
+                // the input bar becomes the only bottom UI in a chat.
+                if !router.isTabBarHidden {
+                    FloatingTabBar(selection: $router.selectedTab,
+                                   unreadBadge: chatService.totalUnread,
+                                   onCompose: { router.openCompose() })
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
             }
+            .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.86),
+                       value: router.isTabBarHidden)
             .sheet(isPresented: $router.isComposePresented) {
                 ComposeView()
             }
@@ -96,6 +103,12 @@ struct RootView: View {
             PrivacySettingsView()
         case .dataStorage:
             DataStorageSettingsView()
+        case .chatFolders:
+            ChatFoldersView()
+        case .devices:
+            DevicesView()
+        case .sharedMedia:
+            SharedMediaView()
         case .editProfile:
             EditProfileView()
         }

@@ -17,6 +17,10 @@ struct ProfileView: View {
             }
 
             Section("Info") {
+                infoRow(icon: "person", title: "First Name", value: appState.profile.firstName ?? appState.profile.name)
+                if let lastName = appState.profile.lastName, !lastName.isEmpty {
+                    infoRow(icon: "person.2", title: "Last Name", value: lastName)
+                }
                 if let phone = appState.profile.phoneNumber, !phone.isEmpty {
                     infoRow(icon: "phone", title: "Phone", value: phone)
                 }
@@ -34,11 +38,21 @@ struct ProfileView: View {
                     .fill(.thinMaterial)
             )
 
+            Section("Shared") {
+                settingsRow(icon: "photo.on.rectangle.angled", tint: Color.accentColor, title: "Shared Media", destination: .sharedMedia)
+            }
+            .listRowBackground(
+                RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous)
+                    .fill(.thinMaterial)
+            )
+
             Section("Categories") {
-                settingsRow(icon: "paintpalette", tint: .blue, title: "Appearance", destination: .appearance)
+                settingsRow(icon: "paintpalette", tint: Color.accentColor, title: "Appearance", destination: .appearance)
                 settingsRow(icon: "bell.badge", tint: .red, title: "Notifications", destination: .notifications)
                 settingsRow(icon: "lock.shield", tint: .green, title: "Privacy & Security", destination: .privacy)
                 settingsRow(icon: "internalmemory", tint: .orange, title: "Data & Storage", destination: .dataStorage)
+                settingsRow(icon: "folder", tint: .indigo, title: "Chat Folders", destination: .chatFolders)
+                settingsRow(icon: "laptopcomputer.and.iphone", tint: .cyan, title: "Devices", destination: .devices)
             }
             .listRowBackground(
                 RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous)
@@ -61,6 +75,16 @@ struct ProfileView: View {
                 RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous)
                     .fill(.thinMaterial)
             )
+
+            // Bottom clearance (V3 §8): Log Out must stay reachable and the
+            // list must scroll fully clear of the floating tab bar.
+            Section {
+                Color.clear
+                    .frame(height: 40)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .accessibilityHidden(true)
+            }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -132,6 +156,8 @@ struct ProfileView: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// Category row. The native `NavigationLink` disclosure indicator is the
+    /// ONLY chevron (V3 §9 — no manually drawn second chevron).
     private func settingsRow(icon: String, tint: Color, title: String, destination: SettingsDestination) -> some View {
         NavigationLink(value: destination) {
             HStack(spacing: AppSpacing.sm) {
@@ -144,9 +170,6 @@ struct ProfileView: View {
                     .font(AppTypography.body)
                     .foregroundStyle(AppColors.primary)
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(AppColors.tertiary)
             }
             .contentShape(Rectangle())
         }
